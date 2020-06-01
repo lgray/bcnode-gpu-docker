@@ -23,12 +23,6 @@ echo
 export CUDA_HOME=/usr/local/cuda
 export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/cuda/lib64:/usr/local/cuda/extras/CUPTI/lib64
 export PATH=${PATH}:${CUDA_HOME}/bin
-echo -e "${GREEN}Let's see if and which version of Nvidia CUDA is available on the host:${NC}"
-nvidia-smi | head -3 | tail -1
-echo
-
-echo -e "${GREEN}Check the following output if Docker has access to one or more GPUs:${NC}"
-docker run --rm --gpus all nvidia/cuda:10.2-base-ubuntu18.04 nvidia-smi
 
 . ./config
 
@@ -58,25 +52,14 @@ if ! [ -x "$(command -v jq)" ]; then
   exit 1
 fi
 
-echo -e "${GREEN}Creating a comfy Docker network for the containers...${NC}"
-docker network create waietng
-
-echo -e "${GREEN}Firing up a container for LG's GPU miner...${NC}"
-docker run --restart=unless-stopped  --name gpuminer \
---gpus all \
--p 50052 -d \
---network waietng \
-${gpuminer_image} 2>&1
-
 echo -e "${GREEN}Starting bcnode container...${NC}"
 docker run -d --restart=unless-stopped --name bcnode \
 -p 3000:3000 -p 16060:16060/tcp -p 16060:16060/udp -p 16061:16061/tcp -p 16061:16061/udp \
 --memory-reservation="6900m" \
 --env-file ./config \
---network waietng \
 --mount source=db,target=/bc/_data \
 ${bcnode_image} \
-start --rovers --rpc --ws --ui --node --scookie "${BC_SCOOKIE}" 2>&1
+start --rovers --ws --ui --rpc --node --scookie "${BC_SCOOKIE}" --relay-mode 2>&1
 echo -e "${GREEN}Done.${NC}"
 echo
 docker ps
